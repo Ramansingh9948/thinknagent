@@ -1,0 +1,38 @@
+[Unit]
+Description=ThinkNCollab Agent
+Documentation=https://thinkncollab.com/docs/agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# Run as a dedicated low-privilege user for security
+# Create with: sudo useradd --system --no-create-home thinknagent
+User=thinknagent
+Group=thinknagent
+
+# Point to wherever thinknagent was installed globally
+ExecStart=/usr/bin/node /usr/local/bin/thinknagent start
+
+# Restart policy
+Restart=on-failure
+RestartSec=10
+StartLimitInterval=60
+StartLimitBurst=3
+
+# Hardening — limit what the process can do
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only        # needed to read ~/.thinknagent/config.json
+ReadWritePaths=/root/.thinknagent /home/%u/.thinknagent
+PrivateTmp=true
+
+# Environment
+Environment=NODE_ENV=production
+
+# Logging — journald will capture stdout/stderr
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=thinknagent
+
+[Install]
+WantedBy=multi-user.target

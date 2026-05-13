@@ -1,0 +1,29 @@
+{
+  "name": "thinknagent",
+  "version": "0.1.10",
+  "description": "ThinkNCollab server agent — metrics, logs, alerts, shell bridge",
+  "main": "lib/agent.js",
+  "bin": {
+    "thinknagent": "./bin/thinknagent.js"
+  },
+  "scripts": {
+    "start": "node bin/thinknagent.js start",
+    "dev": "node bin/thinknagent.js start --dev"
+  },
+  "dependencies": {
+    "socket.io-client": "^4.7.5",
+    "node-pty": "^1.0.0",
+    "systeminformation": "^5.22.7",
+    "chokidar": "^3.6.0",
+    "chalk": "^4.1.2",
+    "commander": "^12.1.0",
+    "conf": "^10.2.0",
+    "ora": "^5.4.1",
+    "uuid": "^10.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": ["thinkncollab", "devops", "monitoring", "agent"],
+  "license": "MIT"
+}
