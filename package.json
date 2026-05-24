@@ -3,6 +3,7 @@
   "version": "0.1.10",
   "description": "ThinkNCollab server agent — metrics, logs, alerts, shell bridge",
   "main": "lib/agent.js",
+  "author": "ThinkNCollab Team <team@thinkncollab.com>",
   "bin": {
     "thinknagent": "./bin/thinknagent.js"
   },
