@@ -181,6 +181,17 @@ Role is assigned by the room Owner at approval time and can be changed anytime f
 
 ---
 
+## Security & Privacy
+
+The agent is designed with a "zero-trust" approach to protect your server's credentials, logs, and shell sessions.
+
+- 🔒 **Double-Gate Authorization**: New agents connect in `PENDING` mode. They cannot stream metrics or logs until explicitly approved by the room Owner. Upon approval, they receive a signed HMAC `agentToken` for secure reconnection.
+- 🛡️ **Remote Shell Environment Insulation**: Spawning a shell strips all server environment variables, passing only a safe allowlist (`PATH`, `HOME`, `SHELL`, `TERM`, `LANG`). Your database credentials, cloud API keys, and environment secrets remain completely safe.
+- 🚫 **Path Traversal & Sensitive File Blocks**: Log files are verified using absolute path checking. They must belong to allowed directories (`/var/log`, `/home`, `/root`, `/tmp`) and are explicitly blocked if they contain sensitive directories or files like `.ssh/id_rsa`, `.env`, `/etc/passwd`, `/etc/shadow`, etc.
+- 💬 **SSL Transport**: All WebSocket and HTTP traffic between the agent and the server is encrypted using HTTPS/WSS.
+
+---
+
 ## Auth Flow
 thinknagent init
 → generates agentId
@@ -241,7 +252,7 @@ pm2 startup
 
 **Using systemd:**
 ```bash
-sudo nano /etc/systemd/system/app.service
+sudo nano /etc/systemd/system/thinknagent.service
 ```
 
 ```ini
