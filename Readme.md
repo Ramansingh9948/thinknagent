@@ -98,24 +98,40 @@ thinknagent start
 ```
 
 Output:
+```
 Starting thinknagent — my-server
 Status: PENDING — waiting for Owner approval
 [agent] Connecting to https://thinkncollab.com...
 [thinknagent] Registered as <agentId> — waiting for Owner approval...
+```
 
 ### Step 3 — Approve in Browser
 
-Go to your room's DevOps Wall:
-https://thinkncollab.com/devops/<roomId>/devops
-
-Click **Approve** on the pending agent in the sidebar.
+1. Go to your room's DevOps Wall:
+   `https://thinkncollab.com/devops/<roomId>/devops`
+2. Click **Approve** on the pending agent in the sidebar.
 
 Once approved:
+```
 [thinknagent] Approved! Role: monitor | Room: <roomId>
 [agent] Active. Role: monitor | Room: <roomId>
 [metrics] Poller started
 [logs] Watching 2 file(s)
 [shell] Bridge ready
+```
+
+### Step 4 — Run with PM2 (Keep Alive)
+
+To run the agent in the background so that all features (metrics, logs, shell) stay permanently active and accessible after you disconnect your terminal session:
+
+```bash
+# Start the agent using PM2
+pm2 start thinknagent --name "thinknagent_logs" -- start
+
+# Save PM2 process list and configure startup
+pm2 save
+pm2 startup
+```
 
 ---
 
