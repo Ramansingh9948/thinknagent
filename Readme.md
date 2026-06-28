@@ -45,6 +45,7 @@ chmod +x (which thinknagent)
 | `--room <roomId>` | ✅ | Room ID to connect to |
 | `--gpu` | ❌ | Enable GPU metrics (requires nvidia-smi) |
 | `--logs <paths>` | ❌ | Comma-separated log file paths to stream |
+| `--app-path <path>` | ❌ | Path to the deployed application folder (to track and display version) |
 
 ---
 
@@ -78,14 +79,15 @@ thinknagent init \
   --logs <YOUR_PM2_LOG_FILE> 
 ```
 
-**With GPU metrics:**
+**With GPU metrics & application version tracking:**
 ```bash
 thinknagent init \
   --server YOUR_APP_SERVER \
   --name my-server \
   --room <roomId> \
   --gpu \
-  --logs <YOUR_SYS_LOG_FILE> 
+  --logs <YOUR_SYS_LOG_FILE> \
+  --app-path /var/www/my-node-app
 ```
 
 Get your `roomId` from the room URL:

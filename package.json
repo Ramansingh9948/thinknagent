@@ -1,11 +1,11 @@
 {
   "name": "thinknagent",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "description": "ThinkNCollab server agent — metrics, logs, alerts, shell bridge",
   "main": "lib/agent.js",
-  "author": "ThinkNCollab Team <team@thinkncollab.com>",
+  "author": "ThinkNCollab Team <raman@thinkncollab.com>",
   "bin": {
-    "thinknagent": "./bin/thinknagent.js"
+    "thinknagent": "bin/thinknagent.js"
   },
   "scripts": {
     "start": "node bin/thinknagent.js start",
@@ -25,6 +25,11 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "keywords": ["thinkncollab", "devops", "monitoring", "agent"],
+  "keywords": [
+    "thinkncollab",
+    "devops",
+    "monitoring",
+    "agent"
+  ],
   "license": "MIT"
 }

@@ -24,6 +24,7 @@ program
   .option('--room <roomId>', 'Room ID to connect to')
   .option('--gpu',                  'Enable GPU metrics (requires nvidia-smi)')
   .option('--logs <paths>',         'Comma-separated log file paths to stream')
+  .option('--app-path <path>',      'Path to the deployed application folder (to track version)')
   .action(async (opts) => {
     const existing = store.get('agentToken');
     if (existing) {
@@ -40,6 +41,7 @@ program
       gpu:       !!opts.gpu,
       logs:      opts.logs ? opts.logs.split(',').map(s => s.trim()) : [],
       roomId:    opts.room,
+      appPath:   opts.appPath || null,
       alerts:    [
         // sensible defaults — Owner can edit in browser
         { id: 'cpu-high',  metric: 'cpu.usage',      op: 'gt', value: 85, for: 60, severity: 'warning'  },
@@ -58,6 +60,7 @@ program
     console.log(`  Agent ID: ${chalk.white(agentId)}`);
     console.log(`  GPU     : ${cfg.gpu ? chalk.green('enabled') : chalk.gray('disabled')}`);
     console.log(`  Logs    : ${cfg.logs.length ? chalk.white(cfg.logs.join(', ')) : chalk.gray('none')}`);
+    console.log(`  App Path: ${cfg.appPath ? chalk.white(cfg.appPath) : chalk.gray('none')}`);
     console.log(chalk.gray('  ─────────────────────────────────────────'));
     console.log(chalk.yellow('\n  Next step:'));
     console.log('  1. Run: ' + chalk.cyan('thinknagent start'));
@@ -109,6 +112,7 @@ program
     console.log(`  Status  : ${cfg.agentToken ? chalk.green('APPROVED') : chalk.yellow('PENDING')}`);
     console.log(`  GPU     : ${cfg.gpu ? chalk.green('enabled') : chalk.gray('disabled')}`);
     console.log(`  Logs    : ${(cfg.logs||[]).length ? cfg.logs.join(', ') : chalk.gray('none')}`);
+    console.log(`  App Path: ${cfg.appPath ? chalk.white(cfg.appPath) : chalk.gray('none')}`);
     console.log(`  Alerts  : ${(cfg.alerts||[]).length} rule(s)`);
     console.log(chalk.gray('  ────────────────────────────────\n'));
   });
