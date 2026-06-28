@@ -1,6 +1,6 @@
 {
   "name": "thinknagent",
-  "version": "0.1.13",
+  "version": "0.1.17",
   "description": "ThinkNCollab server agent — metrics, logs, alerts, shell bridge",
   "main": "lib/agent.js",
   "author": "ThinkNCollab Team <raman@thinkncollab.com>",
