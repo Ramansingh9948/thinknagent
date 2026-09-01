@@ -1,344 +1,152 @@
-# thinknagent
+# 🚀 thinknagent
 
-Official server agent for [ThinkNCollab](https://thinkncollab.com) — monitor your servers, stream logs, and access remote terminals directly from your DevOps Wall.
+[![npm version](https://img.shields.io/npm/v/thinknagent.svg?style=flat-square&color=00ff88)](https://www.npmjs.com/package/thinknagent)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](LICENSE)
+[![node](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg?style=flat-square)](https://nodejs.org)
+[![e2ee](https://img.shields.io/badge/security-AES--256--GCM%20E2EE-brightgreen.svg?style=flat-square)](https://thinkncollab.com)
+
+Official high-performance server agent for **[ThinkNCollab DevOps Wall](https://thinkncollab.com)** — real-time hardware metrics, event-driven log streaming, interactive Web PTY shell, APM traces, and automatic alert monitoring with **100% Client-Side AES-256-GCM End-to-End Encryption (E2EE)**.
 
 ---
 
-## Installation
+## ⚡ Quick Start (Zero Install / NPX)
+
+Connect any server in seconds with **NPX**:
+
+```bash
+# 1. Initialize & register with your room
+npx thinknagent init --room <roomId> --role shell
+
+# 2. Start the self-healing background daemon
+npx thinknagent daemon start
+```
+
+---
+
+## 📦 Global Installation
 
 ```bash
 npm install -g thinknagent
 ```
 
-> **Linux/macOS only.** Requires Node.js v18+.
+> **Prerequisites:** Node.js v18+ on Linux, macOS, or Windows (WSL).
 
-**If build error on Linux:**
+If you encounter native build errors for interactive shell (`node-pty`):
 ```bash
-sudo apt-get install -y build-essential python3
-npm install -g thinknagent
-```
+# Ubuntu / Debian
+sudo apt-get update && sudo apt-get install -y build-essential python3
 
-**If permission denied:**
-```bash
-chmod +x (which thinknagent)
+# CentOS / RHEL
+sudo yum groupinstall "Development Tools" -y
 ```
 
 ---
 
-## Commands
+## 🛠️ CLI Commands
 
 | Command | Description |
-|---------|-------------|
-| `thinknagent init` | Register this server with ThinkNCollab |
-| `thinknagent start` | Connect and start monitoring |
-| `thinknagent status` | Show current config and status |
-| `thinknagent revoke` | Clear all credentials and re-register |
+| :--- | :--- |
+| `thinknagent init` | Initialize & register this node with your ThinkNCollab workspace |
+| `thinknagent start` | Run agent in active foreground (ideal for testing / debugging) |
+| `thinknagent daemon start` | Start detached supervisor with auto-restart protection |
+| `thinknagent daemon stop` | Stop the background daemon supervisor |
+| `thinknagent daemon status` | Check daemon health, PID, uptime, and system status |
+| `thinknagent daemon install` | Install as an OS-level Auto-Boot Service (**Linux Systemd** or **macOS LaunchAgent**) |
+| `thinknagent status` | Show current authentication state, role, token, and node info |
+| `thinknagent logs` | Tail live agent daemon logs |
+| `thinknagent revoke` | Clear local credentials and reset connection state |
 
 ---
 
-## Init Options
+## ⚙️ Initialization Options
 
-| Option | Required | Description |
-|--------|----------|-------------|
-| `--server <url>` | ✅ | ThinkNCollab server URL |
-| `--name <name>` | ✅ | Display name on DevOps Wall |
-| `--room <roomId>` | ✅ | Room ID to connect to |
-| `--gpu` | ❌ | Enable GPU metrics (requires nvidia-smi) |
-| `--logs <paths>` | ❌ | Comma-separated log file paths to stream |
-| `--app-path <path>` | ❌ | Path to the deployed application folder (to track and display version) |
+```bash
+thinknagent init [options]
+```
+
+| Option | Default | Description |
+| :--- | :--- | :--- |
+| `--room <roomId>` | **Required** | Your ThinkNCollab Room ID (from workspace URL) |
+| `--server <url>` | `https://thinkncollab.com` | Central ThinkNCollab server URL |
+| `--name <name>` | Hostname | Custom display name for this node |
+| `--role <role>` | `shell` | Requested permission role: `monitor` | `shell` | `admin` |
+| `--logs <paths>` | `` | Comma-separated log file paths to stream live |
+| `--app-path <path>` | Current Dir | Application directory path (for auto-version & git commit tracking) |
+| `--gpu` | `false` | Enable NVIDIA GPU telemetry (requires `nvidia-smi`) |
+| `--force` | `false` | Overwrite existing configuration |
+
+### Example Commands:
+
+```bash
+# Standard Production Server with Nginx & PM2 logs
+thinknagent init \
+  --server https://thinkncollab.com \
+  --room 6a318170496c7b00a7f74260 \
+  --name "prod-api-01" \
+  --role shell \
+  --logs "/var/log/nginx/error.log,/home/ubuntu/.pm2/logs/app-error.log" \
+  --app-path /home/ubuntu/myapp
+```
 
 ---
 
-## Quick Start
+## 🔒 Security & AES-256 E2EE Architecture
 
-### Step 1 — Initialize
+`thinknagent` is built with a strict **Zero-Trust & Zero-Knowledge** security model:
 
-**Basic (metrics only):**
-```bash
-thinknagent init \
-  --server YOUR_APP_SERVER \
-  --name my-server \
-  --room <roomId>
-```
+1. **Client-Side AES-256-GCM Encryption**:
+   - All streamed log lines and sensitive terminal output are encrypted on the server before network transmission.
+   - The central ThinkNCollab server acts as a blind relay and **cannot decrypt or read your logs**.
+   - Your browser decrypts the stream locally via the **WebCrypto API** (`e2ee-vault.js`).
 
-**With log streaming:**
-```bash
-thinknagent init \
-  --server YOUR_APP_SERVER \
-  --name my-server \
-  --room <roomId> \
-  --logs <YOUR_LOG_FILE> 
-```
+2. **Double-Gate Role-Based Access Control**:
+   - New agents start in `PENDING` mode until explicitly approved by the workspace owner in the DevOps Wall.
+   - Roles (`monitor`, `shell`, `admin`) restrict remote PTY terminal execution.
 
-**With PM2 app logs:**
-```bash
-thinknagent init \
-  --server YOUR_APP_SERVER \
-  --name my-server \
-  --room <roomId> \
-  --logs <YOUR_PM2_LOG_FILE> 
-```
+3. **Isolated Shell Environment**:
+   - Interactive PTY shells run in a sanitized environment whitelist.
+   - Secrets, environment variables (`.env`), and credentials belonging to the agent process are never leaked into the subshell.
 
-**With GPU metrics & application version tracking:**
-```bash
-thinknagent init \
-  --server YOUR_APP_SERVER \
-  --name my-server \
-  --room <roomId> \
-  --gpu \
-  --logs <YOUR_SYS_LOG_FILE> \
-  --app-path /var/www/my-node-app
-```
+4. **Path Traversal Protection**:
+   - Log streaming strictly blocks access to `/etc/shadow`, `/etc/sudoers`, `.ssh`, `.gnupg`, and `.env` files.
 
-Get your `roomId` from the room URL:
-https://thinkncollab.com/rooms/YOUR_ROOM_ID_HERE
+---
 
-### Step 2 — Start
+## 📊 Features on ThinkNCollab DevOps Wall
+
+- **◈ Live Telemetry**: CPU, Memory, Disk mounts, Network I/O, Top CPU processes, and GPU utilization streamed over persistent WebSockets.
+- **≡ Encrypted Log Streams**: High-throughput chunked file watching (`chokidar`) with instant tailing and search.
+- **▸ Full Interactive Web PTY**: Real-time bidirectional terminal with color, resize, and keystroke streaming.
+- **⚡ APM Traces & Percentiles**: Auto-computes latency distribution (p50, p90, p95, p99) and flame graphs.
+- **🚨 Dynamic Alert Engine**: Custom multi-metric threshold triggers evaluated in real-time.
+
+---
+
+## 🔄 Running Permanently (Production Setup)
+
+### Option 1: Built-in Systemd Service (Recommended for Linux Servers)
 
 ```bash
-thinknagent start
+# Auto-generates and activates /etc/systemd/system/thinknagent.service
+sudo thinknagent daemon install
 ```
 
-Output:
-```
-Starting thinknagent — my-server
-Status: PENDING — waiting for Owner approval
-[agent] Connecting to https://thinkncollab.com...
-[thinknagent] Registered as <agentId> — waiting for Owner approval...
-```
-
-### Step 3 — Approve in Browser
-
-1. Go to your room's DevOps Wall:
-   `https://thinkncollab.com/devops/<roomId>/devops`
-2. Click **Approve** on the pending agent in the sidebar.
-
-Once approved:
-```
-[thinknagent] Approved! Role: monitor | Room: <roomId>
-[agent] Active. Role: monitor | Room: <roomId>
-[metrics] Poller started
-[logs] Watching 2 file(s)
-[shell] Bridge ready
-```
-
-### Step 4 — Run with PM2 (Keep Alive)
-
-To run the agent in the background so that all features (metrics, logs, shell) stay permanently active and accessible after you disconnect your terminal session:
+### Option 2: Built-in Background Supervisor
 
 ```bash
-# Start the agent using PM2
-pm2 start thinknagent --name "thinknagent_logs" -- start
+thinknagent daemon start
+```
 
-# Save PM2 process list and configure startup
+### Option 3: PM2 Process Manager
+
+```bash
+pm2 start thinknagent --name "thinknagent" -- start
 pm2 save
 pm2 startup
 ```
 
 ---
 
-## Features
-
-### ◈ Metrics
-Real-time system metrics pushed every 5 seconds — no config needed, starts automatically:
-- CPU usage + load average + core count
-- Memory usage (used / total GB)
-- Disk usage per mount point
-- Network I/O (rx/tx per second)
-- Top 5 processes by CPU
-
-### ≡ Log Streaming
-Stream any log file to the DevOps Wall in real-time:
-```bash
-# Common log paths on Ubuntu
-/var/log/syslog                                    # system
-/var/log/auth.log                                  # auth/ssh
-/var/log/nginx/access.log                          # nginx access
-/var/log/nginx/error.log                           # nginx errors
-/home/ubuntu/.pm2/logs/app-out.log        # pm2 stdout
-/home/ubuntu/.pm2/logs/app-error.log      # pm2 stderr
-```
-
-Pass multiple paths comma-separated:
-```bash
---logs /var/log/syslog,/var/log/nginx/error.log,/home/ubuntu/.pm2/logs/app-out.log
-```
-
-### ⚠ Alerts
-Default alert rules — configurable from DevOps Wall at runtime:
-
-| ID | Metric | Condition | Severity |
-|----|--------|-----------|----------|
-| cpu-high | CPU usage | > 85% for 60s | warning |
-| cpu-crit | CPU usage | > 95% for 30s | critical |
-| mem-high | Memory usage | > 85% for 60s | warning |
-| disk-root | Disk `/` | > 90% | critical |
-
-### ▸ Shell Access
-Remote terminal via xterm.js in the browser. Requires `shell` or `admin` role.
-
-**How to enable shell access:**
-
-1. Owner opens DevOps Wall
-2. Changes agent role to `shell` from the UI
-3. Click `▸ shell` tab → `▸ open terminal`
-
-Full bash session on your server — directly in the browser.
-
----
-
-## Roles
-
-| Role | Metrics | Logs | Alerts | Shell | Edit Rules |
-|------|---------|------|--------|-------|------------|
-| monitor | ✅ | ✅ | ✅ | ❌ | ❌ |
-| shell | ✅ | ✅ | ✅ | ✅ | ❌ |
-| admin | ✅ | ✅ | ✅ | ✅ | ✅ |
-
-Role is assigned by the room Owner at approval time and can be changed anytime from the DevOps Wall.
-
----
-
-## Security & Privacy
-
-The agent is designed with a "zero-trust" approach to protect your server's credentials, logs, and shell sessions.
-
-- 🔒 **Double-Gate Authorization**: New agents connect in `PENDING` mode. They cannot stream metrics or logs until explicitly approved by the room Owner. Upon approval, they receive a signed HMAC `agentToken` for secure reconnection.
-- 🛡️ **Remote Shell Environment Insulation**: Spawning a shell strips all server environment variables, passing only a safe allowlist (`PATH`, `HOME`, `SHELL`, `TERM`, `LANG`). Your database credentials, cloud API keys, and environment secrets remain completely safe.
-- 🚫 **Path Traversal & Sensitive File Blocks**: Log files are verified using absolute path checking. They must belong to allowed directories (`/var/log`, `/home`, `/root`, `/tmp`) and are explicitly blocked if they contain sensitive directories or files like `.ssh/id_rsa`, `.env`, `/etc/passwd`, `/etc/shadow`, etc.
-- 💬 **SSL Transport**: All WebSocket and HTTP traffic between the agent and the server is encrypted using HTTPS/WSS.
-
----
-
-## Auth Flow
-thinknagent init
-→ generates agentId
-→ saves to ~/.thinknagent/config.json
-thinknagent start
-→ connects to wss://thinkncollab.com/devops
-→ sends { agentId, name, hostname, roomId }
-→ server creates PENDING entry
-→ Owner approves in browser
-→ server sends back signed agentToken
-→ token saved to config (mode 600)
-→ agent reconnects as ACTIVE
-subsequent starts
-→ sends { agentId, agentToken }
-→ server verifies → ACTIVE immediately
-
----
-
-## Config File
-
-Location: `~/.thinknagent/config.json` (permissions: 600)
-
-```json
-{
-  "agentId": "uuid-v4",
-  "serverUrl": "ur.server.url",
-  "name": "my-server",
-  "roomId": "your-room-id",
-  "agentToken": "sha256-hmac-signed-token",
-  "role": "monitor",
-  "gpu": false,
-  "logs": [
-    "/var/log/syslog",
-    "/var/log/nginx/error.log"
-  ],
-  "alerts": [
-    { "id": "cpu-high",  "metric": "cpu.usage",      "op": "gt", "value": 85, "for": 60, "severity": "warning"  },
-    { "id": "cpu-crit",  "metric": "cpu.usage",      "op": "gt", "value": 95, "for": 30, "severity": "critical" },
-    { "id": "mem-high",  "metric": "memory.usedPct", "op": "gt", "value": 85, "for": 60, "severity": "warning"  },
-    { "id": "disk-root", "metric": "disk./",         "op": "gt", "value": 90, "for": 0,  "severity": "critical" }
-  ]
-}
-```
-
----
-
-## Run as a Service (Recommended)
-
-Keep the agent running after SSH disconnect:
-
-**Using pm2:**
-```bash
-npm install -g pm2
-pm2 start $(which thinknagent) --name thinknagent -- start
-pm2 save
-pm2 startup
-```
-
-**Using systemd:**
-```bash
-sudo nano /etc/systemd/system/thinknagent.service
-```
-
-```ini
-[Unit]
-Description=ThinkNCollab Agent
-After=network.target
-
-[Service]
-Type=simple
-User=ubuntu
-ExecStart=/home/ubuntu/.npm-global/bin/thinknagent start
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```bash
-sudo systemctl enable thinknagent
-sudo systemctl start thinknagent
-sudo systemctl status thinknagent
-```
-
----
-
-## Troubleshooting
-
-**Permission denied**
-```bash
-chmod +x $(which thinknagent)
-```
-
-**node-pty build error**
-```bash
-sudo apt-get install -y build-essential python3
-npm install -g thinknagent
-```
-
-**Registration rejected: Invalid or revoked credentials**
-```bash
-thinknagent revoke
-thinknagent init --server https://thinkncollab.com --name my-server --room <roomId>
-thinknagent start
-```
-
-**Agent connects but not showing in DevOps Wall**
-
-Refresh the DevOps Wall page — the agent list updates on page load.
-
-**Metrics not updating**
-
-Make sure agent is approved and `connected: true`. Check:
-```bash
-thinknagent status
-```
-
----
-
-## Requirements
-
-- Node.js v18+
-- Linux or macOS
-- `build-essential` + `python3` (for shell feature)
-- Outbound HTTPS/WSS to your ThinkNCollab server
-
----
-
-## License
+## 📜 License
 
 MIT © [ThinkNCollab](https://thinkncollab.com)

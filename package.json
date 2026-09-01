@@ -1,11 +1,12 @@
 {
   "name": "thinknagent",
-  "version": "0.1.17",
-  "description": "ThinkNCollab server agent — metrics, logs, alerts, shell bridge",
+  "version": "0.1.22",
+  "description": "ThinkNCollab server agent & MCP server — metrics, logs, alerts, shell bridge, AI planning",
   "main": "lib/agent.js",
   "author": "ThinkNCollab Team <raman@thinkncollab.com>",
   "bin": {
-    "thinknagent": "bin/thinknagent.js"
+    "thinknagent": "bin/thinknagent.js",
+    "thinkncollab-mcp": "bin/thinkncollab-mcp.js"
   },
   "scripts": {
     "start": "node bin/thinknagent.js start",
