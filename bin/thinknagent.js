@@ -24,6 +24,7 @@ program
   .option('--name <name>',         'Display name for this server (default: hostname)')
   .option('--gpu',                 'Enable GPU metrics (requires nvidia-smi)')
   .option('--interval <ms>',       'Metrics polling interval in ms (default: 1000)', '1000')
+  .option('--retention <days>',    'Disk history retention in days (default: 15)', '15')
   .option('--logs <paths>',        'Comma-separated log file paths to stream')
   .option('--app-path <path>',     'Path to the deployed application folder (to track version)')
   .option('-f, --force',           'Force overwrite existing registration')
@@ -48,18 +49,20 @@ program
     const serverUrl = (opts.server || 'https://thinkncollab.com').replace(/\/$/, '');
     const nodeName = opts.name || os.hostname();
     const intervalMs = opts.interval ? parseInt(opts.interval, 10) : (existing.interval || 1000);
+    const retentionDays = opts.retention ? parseInt(opts.retention, 10) : (existing.retentionDays || 15);
 
     const cfg = {
       ...existing,
       agentId,
       serverUrl,
-      name:      nodeName,
-      interval:  intervalMs,
-      gpu:       opts.gpu !== undefined ? !!opts.gpu : (existing.gpu || false),
-      logs:      opts.logs ? opts.logs.split(',').map(s => s.trim()) : (existing.logs || []),
-      roomId:    opts.room,
-      appPath:   opts.appPath || existing.appPath || null,
-      alerts:    existing.alerts || [
+      name:          nodeName,
+      interval:      intervalMs,
+      retentionDays: retentionDays,
+      gpu:           opts.gpu !== undefined ? !!opts.gpu : (existing.gpu || false),
+      logs:          opts.logs ? opts.logs.split(',').map(s => s.trim()) : (existing.logs || []),
+      roomId:        opts.room,
+      appPath:       opts.appPath || existing.appPath || null,
+      alerts:        existing.alerts || [
         { id: 'cpu-high',  metric: 'cpu.usage',      op: 'gt', value: 85, for: 60, severity: 'warning'  },
         { id: 'cpu-crit',  metric: 'cpu.usage',      op: 'gt', value: 95, for: 30, severity: 'critical' },
         { id: 'mem-high',  metric: 'memory.usedPct', op: 'gt', value: 85, for: 60, severity: 'warning'  },
@@ -76,13 +79,14 @@ program
 
     console.log(chalk.cyan('\n  thinknagent') + chalk.gray(` v${require('../package.json').version}`));
     console.log(chalk.gray('  ─────────────────────────────────────────'));
-    console.log(`  Server  : ${chalk.white(cfg.serverUrl)}`);
-    console.log(`  Name    : ${chalk.white(cfg.name)}`);
-    console.log(`  Room ID : ${chalk.white(cfg.roomId)}`);
-    console.log(`  Agent ID: ${chalk.white(agentId)}`);
-    console.log(`  GPU     : ${cfg.gpu ? chalk.green('enabled') : chalk.gray('disabled')}`);
-    console.log(`  Logs    : ${cfg.logs.length ? chalk.white(cfg.logs.join(', ')) : chalk.gray('none')}`);
-    console.log(`  App Path: ${cfg.appPath ? chalk.white(cfg.appPath) : chalk.gray('none')}`);
+    console.log(`  Server    : ${chalk.white(cfg.serverUrl)}`);
+    console.log(`  Name      : ${chalk.white(cfg.name)}`);
+    console.log(`  Room ID   : ${chalk.white(cfg.roomId)}`);
+    console.log(`  Retention : ${chalk.white(cfg.retentionDays + ' Days')}`);
+    console.log(`  Agent ID  : ${chalk.white(agentId)}`);
+    console.log(`  GPU       : ${cfg.gpu ? chalk.green('enabled') : chalk.gray('disabled')}`);
+    console.log(`  Logs      : ${cfg.logs.length ? chalk.white(cfg.logs.join(', ')) : chalk.gray('none')}`);
+    console.log(`  App Path  : ${cfg.appPath ? chalk.white(cfg.appPath) : chalk.gray('none')}`);
     console.log(chalk.gray('  ─────────────────────────────────────────'));
     console.log(chalk.green('  ✔ Configuration saved successfully!\n'));
 
@@ -100,8 +104,9 @@ program
 program
   .command('start')
   .description('Start the agent (connect to ThinkNCollab)')
-  .option('--dev',           'Dev mode — verbose logging')
-  .option('--interval <ms>', 'Metrics polling interval in ms (default: 1000)')
+  .option('--dev',              'Dev mode — verbose logging')
+  .option('--interval <ms>',    'Metrics polling interval in ms (default: 1000)')
+  .option('--retention <days>', 'Disk history retention in days (default: 15)')
   .action((opts) => {
     if (opts.dev) process.env.THINKNAGENT_DEV = '1';
 
@@ -113,6 +118,10 @@ program
 
     if (opts.interval) {
       cfg.interval = parseInt(opts.interval, 10);
+      store.write(cfg);
+    }
+    if (opts.retention) {
+      cfg.retentionDays = parseInt(opts.retention, 10);
       store.write(cfg);
     }
 

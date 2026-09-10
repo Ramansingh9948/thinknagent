@@ -1,6 +1,6 @@
 {
   "name": "thinknagent",
-  "version": "0.1.22",
+  "version": "0.1.28",
   "description": "ThinkNCollab server agent & MCP server — metrics, logs, alerts, shell bridge, AI planning",
   "main": "lib/agent.js",
   "author": "ThinkNCollab Team <raman@thinkncollab.com>",
