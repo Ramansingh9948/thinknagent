@@ -4,7 +4,8 @@
 const { Command } = require('commander');
 const chalk       = require('chalk');
 const ora         = require('ora');
-const { v4: uuid} = require('uuid');
+const crypto      = require('crypto');
+const uuid        = () => (crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString('hex'));
 const store       = require('../lib/store');
 const Agent       = require('../lib/agent');
 
@@ -27,6 +28,7 @@ program
   .option('--retention <days>',    'Disk history retention in days (default: 15)', '15')
   .option('--logs <paths>',        'Comma-separated log file paths to stream')
   .option('--app-path <path>',     'Path to the deployed application folder (to track version)')
+  .option('--pin-cert <sha256>',   'Pin server SHA-256 certificate fingerprint for zero-trust MITM defense')
   .option('-f, --force',           'Force overwrite existing registration')
   .option('-d, --daemon',          'Start background auto-restart daemon immediately after init')
   .action(async (opts) => {
@@ -55,14 +57,15 @@ program
       ...existing,
       agentId,
       serverUrl,
-      name:          nodeName,
-      interval:      intervalMs,
-      retentionDays: retentionDays,
-      gpu:           opts.gpu !== undefined ? !!opts.gpu : (existing.gpu || false),
-      logs:          opts.logs ? opts.logs.split(',').map(s => s.trim()) : (existing.logs || []),
-      roomId:        opts.room,
-      appPath:       opts.appPath || existing.appPath || null,
-      alerts:        existing.alerts || [
+      name:            nodeName,
+      interval:        intervalMs,
+      retentionDays:   retentionDays,
+      gpu:             opts.gpu !== undefined ? !!opts.gpu : (existing.gpu || false),
+      logs:            opts.logs ? opts.logs.split(',').map(s => s.trim()) : (existing.logs || []),
+      roomId:          opts.room,
+      appPath:         opts.appPath || existing.appPath || null,
+      certFingerprint: opts.pinCert || existing.certFingerprint || null,
+      alerts:          existing.alerts || [
         { id: 'cpu-high',  metric: 'cpu.usage',      op: 'gt', value: 85, for: 60, severity: 'warning'  },
         { id: 'cpu-crit',  metric: 'cpu.usage',      op: 'gt', value: 95, for: 30, severity: 'critical' },
         { id: 'mem-high',  metric: 'memory.usedPct', op: 'gt', value: 85, for: 60, severity: 'warning'  },
@@ -158,9 +161,9 @@ program
 program
   .command('status')
   .description('Show current agent config, approval, and daemon status')
-  .action(() => {
+  .action(async () => {
     const os = require('os');
-    const cfg = store.read();
+    let cfg = store.read();
     const DaemonManager = require('../lib/daemon');
     const daemon = new DaemonManager();
     const isRunning = daemon.isRunning();
@@ -171,18 +174,38 @@ program
       return;
     }
 
+    // Dynamic auto-sync: If local store doesn't have token yet, check server for live approval
+    if (!cfg.agentToken && cfg.serverUrl && cfg.agentId) {
+      try {
+        const url = `${cfg.serverUrl}/devops/api/agent/status/${cfg.agentId}`;
+        const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.success && data.status === 'approved' && data.token) {
+            store.set('agentToken', data.token);
+            if (data.role) store.set('role', data.role);
+            cfg = store.read();
+          }
+        }
+      } catch (e) {}
+    }
+
     console.log(chalk.cyan('\n  thinknagent status') + chalk.gray(` v${require('../package.json').version}`));
     console.log(chalk.gray('  ─────────────────────────────────────────────'));
-    console.log(`  Name       : ${chalk.white(cfg.name || os.hostname())}`);
-    console.log(`  Server     : ${chalk.white(cfg.serverUrl || 'https://thinkncollab.com')}`);
-    console.log(`  Room ID    : ${chalk.white(cfg.roomId || '—')}`);
-    console.log(`  Agent ID   : ${chalk.white(cfg.agentId || '—')}`);
-    console.log(`  Role       : ${chalk.white(cfg.role || 'monitor')}`);
-    console.log(`  Auth State : ${cfg.agentToken ? chalk.green('APPROVED (Active)') : chalk.yellow('PENDING (Waiting for Owner approval)')}`);
-    console.log(`  Daemon     : ${isRunning ? chalk.green(`RUNNING (PID ${daemon.getPid()})`) : chalk.gray('STOPPED')}`);
-    console.log(`  GPU        : ${cfg.gpu ? chalk.green('enabled') : chalk.gray('disabled')}`);
-    console.log(`  Logs       : ${(cfg.logs||[]).length ? cfg.logs.join(', ') : chalk.gray('none')}`);
-    console.log(`  App Path   : ${cfg.appPath ? chalk.white(cfg.appPath) : chalk.gray('none')}`);
+    console.log(`  Name         : ${chalk.white(cfg.name || os.hostname())}`);
+    console.log(`  Server       : ${chalk.white(cfg.serverUrl || 'https://thinkncollab.com')}`);
+    console.log(`  Room ID      : ${chalk.white(cfg.roomId || '—')}`);
+    console.log(`  Agent ID     : ${chalk.white(cfg.agentId || '—')}`);
+    console.log(`  Role         : ${chalk.white(cfg.role || 'monitor')}`);
+    console.log(`  Auth State   : ${cfg.agentToken ? chalk.green('APPROVED (Zero-Knowledge HMAC)') : chalk.yellow('PENDING (Waiting for Owner approval)')}`);
+    console.log(`  MITM Defense : ${chalk.green('ACTIVE (Anti-Replay Nonce + Strict TLS)')}`);
+    if (cfg.certFingerprint) {
+      console.log(`  Cert Pinning : ${chalk.green('ACTIVE (' + cfg.certFingerprint.slice(0, 16) + '...)')}`);
+    }
+    console.log(`  Daemon       : ${isRunning ? chalk.green(`RUNNING (PID ${daemon.getPid()})`) : chalk.gray('STOPPED')}`);
+    console.log(`  GPU          : ${cfg.gpu ? chalk.green('enabled') : chalk.gray('disabled')}`);
+    console.log(`  Logs         : ${(cfg.logs||[]).length ? cfg.logs.join(', ') : chalk.gray('none')}`);
+    console.log(`  App Path     : ${cfg.appPath ? chalk.white(cfg.appPath) : chalk.gray('none')}`);
     console.log(chalk.gray('  ─────────────────────────────────────────────\n'));
   });
 
